@@ -1,7 +1,7 @@
 # ⚡ REX — Remote EXecution Protocol (RXP/2.0)
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/T4wroot/rex?style=for-the-badge&color=7289da&label=RXP%2F2.0" alt="Release">
+  <img src="https://img.shields.io/github/v/release/dalroot/rex?style=for-the-badge&color=7289da&label=RXP%2F2.0" alt="Release">
   <img src="https://img.shields.io/badge/Latency-Sub--2ms-brightgreen?style=for-the-badge&logo=speedtest" alt="Latency">
   <img src="https://img.shields.io/badge/Transport-Raw%20TCP%20%7C%20TLS1.3-blue?style=for-the-badge&logo=linux" alt="Transport">
   <img src="https://img.shields.io/badge/Local%20Footprint-Zero-orange?style=for-the-badge" alt="Zero Local Footprint">
@@ -123,7 +123,7 @@ All communications over TCP Port `7444` use the **RXP/2.0 Packed Binary Structur
 Run this command on any Linux server (Ubuntu, Debian, RHEL, CentOS):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/T4wroot/rex/master/rex-node/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dalroot/rex/master/rex-node/install.sh | bash
 ```
 
 *Daemon listens on **TCP Port `7444`** (RXP/2.0 Binary Protocol) & **Port `7443`** (WebSocket).*
@@ -153,7 +153,7 @@ rex mode allowlist
 ### Installation
 
 ```bash
-pip install git+https://github.com/T4wroot/rex.git#subdirectory=rex-client
+pip install git+https://github.com/dalroot/rex.git#subdirectory=rex-client
 ```
 
 ### Complete Python Example (`RXPDirectClient`)
@@ -211,10 +211,10 @@ if __name__ == "__main__":
 
 We welcome contributions, feature proposals, and community SDK implementations (Node.js, Rust, Go)!
 
-- **Report Bugs & Ideas:** Open an issue in [GitHub Issues](https://github.com/T4wroot/rex/issues).
+- **Report Bugs & Ideas:** Open an issue in [GitHub Issues](https://github.com/dalroot/rex/issues).
 - **Changelog:** Review release history in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
 ## 📄 License
-Released under the [MIT License](LICENSE) © 2026 T4wroot & REX Protocol Contributors.
+Released under the [MIT License](LICENSE) © 2026 dalroot & REX Protocol Contributors.

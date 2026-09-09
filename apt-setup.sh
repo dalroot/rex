@@ -11,12 +11,12 @@ apt-get install -y -qq curl ca-certificates gnupg
 
 # 2. Add Key and Source
 mkdir -p /etc/apt/keyrings
-curl -fsSL https://raw.githubusercontent.com/T4wroot/rex/master/rex-node/install.sh -o /tmp/install.sh
+curl -fsSL https://raw.githubusercontent.com/dalroot/rex/master/rex-node/install.sh -o /tmp/install.sh
 
 # 3. Create helper alias/script for apt install rex
 cat > /usr/local/bin/rex-apt-install << 'EOF'
 #!/bin/bash
-curl -fsSL https://raw.githubusercontent.com/T4wroot/rex/master/rex-node/install.sh | bash -s -- "$@"
+curl -fsSL https://raw.githubusercontent.com/dalroot/rex/master/rex-node/install.sh | bash -s -- "$@"
 EOF
 chmod +x /usr/local/bin/rex-apt-install
 

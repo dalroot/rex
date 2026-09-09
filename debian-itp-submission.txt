@@ -5,8 +5,8 @@ Subject: ITP: rex-node -- Remote EXecution Protocol daemon for AI Agents
 
 Package name    : rex-node
 Version         : 1.0.0
-Upstream Author : T4wroot <admin@rexprotocol.dev>
-URL             : https://github.com/T4wroot/rex
+Upstream Author : dalroot <admin@rexprotocol.dev>
+URL             : https://github.com/dalroot/rex
 License         : MIT
 Description     : REX (Remote EXecution Protocol) daemon for AI Agents
 

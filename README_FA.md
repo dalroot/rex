@@ -1,7 +1,7 @@
 # ⚡ راهنمای جامع فارسی پروتکل REX (نسخه 2.0 - RXP/2.0)
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/T4wroot/rex?style=for-the-badge&color=7289da&label=RXP%2F2.0" alt="Release">
+  <img src="https://img.shields.io/github/v/release/dalroot/rex?style=for-the-badge&color=7289da&label=RXP%2F2.0" alt="Release">
   <img src="https://img.shields.io/badge/Latency-زیر%20۲%20میلی%20ثانیه-brightgreen?style=for-the-badge&logo=speedtest" alt="Latency">
   <img src="https://img.shields.io/badge/Transport-Raw%20TCP%20%7C%20TLS1.3-blue?style=for-the-badge&logo=linux" alt="Transport">
   <img src="https://img.shields.io/badge/Local%20Footprint-Zero-orange?style=for-the-badge" alt="Zero Local Footprint">
@@ -165,7 +165,7 @@ CRITICAL DIRECTIVE:
 ### ۱. نصب تک‌دستور روی سرور لینوکس
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/T4wroot/rex/master/rex-node/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dalroot/rex/master/rex-node/install.sh | bash
 ```
 
 ### ۲. مدیریت سطح دسترسی با CLI (`rex mode`)
@@ -191,7 +191,7 @@ rex mode allowlist
 ### نصب پکیج
 
 ```bash
-pip install git+https://github.com/T4wroot/rex.git#subdirectory=rex-client
+pip install git+https://github.com/dalroot/rex.git#subdirectory=rex-client
 ```
 
 ### نمونه کد کامل پایتون
@@ -234,6 +234,6 @@ if __name__ == "__main__":
 ---
 
 ## 📄 لایسنس
-MIT License © 2026 T4wroot & REX Community.
+MIT License © 2026 dalroot & REX Community.
 
 </div>

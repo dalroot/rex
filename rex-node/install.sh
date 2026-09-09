@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # REX One-Line Super Installer (Linux / Ubuntu / Debian / CentOS)
-# Usage: curl -fsSL https://raw.githubusercontent.com/T4wroot/rex/master/rex-node/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/dalroot/rex/master/rex-node/install.sh | bash
 
 set -e
 
@@ -45,8 +45,8 @@ pkill -f rex-node 2>/dev/null || true
 rm -f /usr/local/bin/rex-node.tmp
 
 # Download pre-compiled binary safely via GitHub Release redirects
-DOWNLOAD_URL="https://github.com/T4wroot/rex/releases/download/v2.0.0/${BINARY_NAME}"
-CHECKSUM_URL="https://github.com/T4wroot/rex/releases/download/v2.0.0/${BINARY_NAME}.sha256"
+DOWNLOAD_URL="https://github.com/dalroot/rex/releases/download/v2.0.0/${BINARY_NAME}"
+CHECKSUM_URL="https://github.com/dalroot/rex/releases/download/v2.0.0/${BINARY_NAME}.sha256"
 
 curl -L -f -s -S "$DOWNLOAD_URL" -o /usr/local/bin/rex-node.tmp
 
