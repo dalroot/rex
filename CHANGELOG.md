@@ -4,6 +4,28 @@ All notable changes to the **REX (Remote EXecution Protocol)** project will be d
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-09-24
+
+### 🚀 Added (Sub-Release: REX Connect / RXP/2.5 — WarpGate)
+- **100% Native Go Client Binary (`rex-cli`)**:
+  - Zero Python or runtime dependencies. A single standalone statically-linked binary (`rex`) with sub-millisecond execution start.
+  - Interactive Terminal Engine: Attach full-screen interactive remote bash terminal directly over REX using pure standard-library termios raw mode (`rex connect` / `rex @root <IP>`).
+  - Full support for `Tab` auto-completion, arrow keys, Ctrl+C / Ctrl+Z signals, interactive CLI tools (`nano`, `vim`, `htop`, `btop`), and real-time terminal window dimension synchronization (`SIGWINCH` / `OpPTYResize`).
+- **SSH-like Connection Syntax & Secure Password Prompt**:
+  - Connect with human-friendly SSH syntax:
+    ```bash
+    rex @root <IP>
+    rex root@<IP>
+    rex <IP>
+    ```
+  - Interactive secure token entry without terminal echo (no cleartext tokens saved in shell history).
+- **Enforced TLS 1.3 Transport**:
+  - Direct socket connectivity over TCP Port `7444` secured with TLS 1.3.
+- **Fast Agent Live Execution**:
+  - Real-time command streaming via `rex exec <IP> "<command>"`.
+- **Native File Transfer Engine**:
+  - Direct native file upload/download (`upload_file`, `download_file`, `write_file`, `read_file`) in both Python client and Go server, eliminating chunked bash echo hacks.
+
 ---
 
 ## [2.0.0] - 2026-08-13

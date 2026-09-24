@@ -1,23 +1,50 @@
-# ⚡ راهنمای جامع فارسی پروتکل REX (نسخه 2.0 - RXP/2.0)
+# ⚡ راهنمای جامع فارسی پروتکل REX (نسخه 2.5 - RXP/2.5 WarpGate)
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/dalroot/rex?style=for-the-badge&color=7289da&label=RXP%2F2.0" alt="Release">
-  <img src="https://img.shields.io/badge/Latency-زیر%20۲%20میلی%20ثانیه-brightgreen?style=for-the-badge&logo=speedtest" alt="Latency">
-  <img src="https://img.shields.io/badge/Transport-Raw%20TCP%20%7C%20TLS1.3-blue?style=for-the-badge&logo=linux" alt="Transport">
+  <img src="https://img.shields.io/github/v/release/dalroot/rex?style=for-the-badge&color=7289da&label=RXP%2F2.5" alt="Release">
+  <img src="https://img.shields.io/badge/Latency-زیر%20۱%20میلی%20ثانیه-brightgreen?style=for-the-badge&logo=speedtest" alt="Latency">
+  <img src="https://img.shields.io/badge/Transport-Enforced%20TLS1.3-blue?style=for-the-badge&logo=linux" alt="Transport">
+  <img src="https://img.shields.io/badge/CLI-100%25%20Native%20Go-cyan?style=for-the-badge&logo=go" alt="Native Go CLI">
   <img src="https://img.shields.io/badge/Local%20Footprint-Zero-orange?style=for-the-badge" alt="Zero Local Footprint">
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License">
 </p>
 
 <p align="center">
-  <b>پروتکل اختصاصی، نیتیو و رانتایم مستقیم کنترل زیرساخت سرورها برای ایجنت‌های هوش مصنوعی.</b><br>
-  <i>زمان پاسخگویی زیر ۲ میلی‌ثانیه، ارتباط باینری اختصاصی TCP پورت 7444، عدم درگیری ترمینال محلی، سسشن‌های PTY تعاملی و سیستم‌کال‌های نیتیو.</i>
+  <b>پروتکل اختصاصی، نیتیو و رانتایم مستقیم کنترل زیرساخت سرورها برای انسان و ایجنت‌های هوش مصنوعی.</b><br>
+  <i>زمان پاسخگویی زیر ۱ میلی‌ثانیه، کلاینت ۱۰۰٪ نیتیو Go، ترمینال تعاملی مشابه SSH، سسشن‌های PTY پایدار و رمزنگاری اجباری TLS 1.3.</i>
 </p>
 
 ---
 
 <div dir="rtl" style="font-family: 'Vazirmatn', sans-serif; line-height: 2.2; text-align: right;">
 
-## 💡 پروتکل REX 2.0 چیست؟
+## ⚡ قابلیت‌های جدید در نسخه v2.5.0 (بروزرسانی REX Connect / WarpGate)
+
+- **کلاینت ۱۰۰٪ نیتیو به زبان گو (`rex-cli`):** بدون کوچک‌ترین وابستگی به پایتون یا پکیج‌های اضافی؛ یک فایل باینری مستقل و سبک با سرعت استارت زیر یک میلی‌ثانیه.
+- **ترمینال تعاملی مشابه SSH برای کاربر انسانی (`rex connect`):** با دستور `rex @root <IP>` مستقیماً وارد شل لینوکس سرور شوید با پشتیبانی کامل از کلید **Tab** (تکمیل خودکار دستورات)، کلیدهای جهتی، و ادیتورهای تمام‌صفحه مثل **`nano`**، **`vim`** و **`htop`**.
+- **ورود امن توکن بدون نمایش در ترمینال:** مشابه درخواست پسورد SSH، توکن با امنیت خوانده شده و در تاریخچه شل ذخیره نمی‌شود.
+- **ارتباط امن اجباری با TLS 1.3:** تمام فریم‌های باینری روی پورت ۷۴۴۴ با مدرن‌ترین استاندارد رمزنگاری محافظت می‌شوند.
+- **موتور نیتیو انتقال فایل:** آپلود و دانلود فایل‌ها بدون دردسرهای کدگذاری Base64 یا بافرینگ‌های طولانی.
+
+---
+
+### 💻 اتصال به سرور با دستورات ساده (مشابه SSH):
+
+```bash
+# اتصال با ساختار آشنای SSH (درخواست امن توکن در مرحله بعد)
+rex @root 5.202.5.134
+rex root@5.202.5.134:7444
+
+# اتصال با ارسال مستقیم توکن یا از طریق متغیر محیطی REX_TOKEN
+rex connect 5.202.5.134:7444 --token <TOKEN>
+
+# اجرای آنی یک دستور در سرور برای اسکریپت‌های ایجنت
+rex exec 5.202.5.134:7444 -t <TOKEN> "systemctl status x-ui"
+```
+
+---
+
+## 💡 پروتکل REX چیست؟
 
 **REX** (Remote EXecution Protocol) یک پروتکل ارتباطی اپن‌سورس و نیتیو برای **AI Agentها** (مانند هرمس، آنتی‌گریویتی، AutoGPT و سایر ایجنت‌های هوشمند) است که به آن‌ها اجازه می‌دهد **بدون درگیری سیستم محلی، ترمینال محلی یا ساخت فایل اسکریپت**، مستقیماً روی سرورهای لینوکس دستورات را در سسشن شل تعاملی یا از طریق سیستم‌کال‌های نیتیو اجرا کنند.
 

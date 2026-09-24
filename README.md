@@ -1,16 +1,17 @@
-# ⚡ REX — Remote EXecution Protocol (RXP/2.0)
+# ⚡ REX — Remote EXecution Protocol (RXP/2.5 WarpGate)
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/dalroot/rex?style=for-the-badge&color=7289da&label=RXP%2F2.0" alt="Release">
-  <img src="https://img.shields.io/badge/Latency-Sub--2ms-brightgreen?style=for-the-badge&logo=speedtest" alt="Latency">
-  <img src="https://img.shields.io/badge/Transport-Raw%20TCP%20%7C%20TLS1.3-blue?style=for-the-badge&logo=linux" alt="Transport">
+  <img src="https://img.shields.io/github/v/release/dalroot/rex?style=for-the-badge&color=7289da&label=RXP%2F2.5" alt="Release">
+  <img src="https://img.shields.io/badge/Latency-Sub--1ms-brightgreen?style=for-the-badge&logo=speedtest" alt="Latency">
+  <img src="https://img.shields.io/badge/Transport-Enforced%20TLS1.3-blue?style=for-the-badge&logo=linux" alt="Transport">
+  <img src="https://img.shields.io/badge/CLI-100%25%20Native%20Go-cyan?style=for-the-badge&logo=go" alt="Native Go CLI">
   <img src="https://img.shields.io/badge/Local%20Footprint-Zero-orange?style=for-the-badge" alt="Zero Local Footprint">
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License">
 </p>
 
 <p align="center">
   <b>The Agent-Native Infrastructure Control Protocol & Direct Server Runtime for Autonomous AI Agents.</b><br>
-  <i>Sub-2ms execution start, 8-Byte Binary Packet Framing, Persistent Server PTY Sessions, Native OS Syscalls.</i>
+  <i>Sub-millisecond execution start, 100% Native Go CLI, Interactive SSH-like Terminal, Persistent Server PTY Sessions, and Enforced TLS 1.3 Transport.</i>
 </p>
 
 ---
@@ -19,7 +20,35 @@
 
 ---
 
-## 💡 What is REX 2.0?
+## ⚡ What's New in v2.5.0 (Sub-Release: REX Connect / WarpGate)
+
+- **100% Native Go Client (`rex-cli`)**: Zero Python or runtime dependencies. A single standalone statically-linked binary (`rex`) with instant sub-millisecond execution.
+- **Human Interactive Terminal (SSH-Alternative)**: Run `rex @root <IP>` or `rex connect <IP>` to drop directly into a live, full-screen remote Linux shell with Tab-completion, arrow keys, and interactive tools (`nano`, `vim`, `htop`).
+- **Secure SSH-like Token Prompt**: No need to put secret tokens in your shell history; `rex` prompts securely without echoing characters.
+- **Enforced TLS 1.3 Transport**: Binary frames stream over encrypted TLS 1.3 sockets on port `7444`.
+- **Native File Transfer Engine**: Upload and download files directly without base64 bash echo hacks.
+
+---
+
+## 💻 Human Terminal Experience (`rex connect`)
+
+Connect to any REX server with standard SSH-like ergonomics without needing an exposed OpenSSH Port 22:
+
+```bash
+# SSH-like human syntax (securely prompts for token)
+rex @root 5.202.5.134
+rex root@5.202.5.134:7444
+
+# Or pass token directly or via REX_TOKEN environment variable
+rex connect 5.202.5.134:7444 --token <YOUR_TOKEN>
+
+# Fast live command execution for agent scripts
+rex exec 5.202.5.134:7444 -t <YOUR_TOKEN> "systemctl status x-ui"
+```
+
+---
+
+## 💡 What is REX?
 
 **REX** (Remote EXecution Protocol) is an open-source, agent-native infrastructure control protocol designed specifically for **AI Agents** (such as Hermes, Antigravity, AutoGPT, and autonomous LLM agents) to observe, manage, and execute actions directly on remote Linux servers **with zero local process footprint.**
 
