@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -102,6 +103,26 @@ func parseTargetAddress(input string) string {
 	return target
 }
 
+func splitFlagsAndPosArgs(args []string) ([]string, []string) {
+	var flagArgs []string
+	var posArgs []string
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if a == "-t" || a == "-token" || a == "--token" {
+			flagArgs = append(flagArgs, a)
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+		} else if strings.HasPrefix(a, "-") {
+			flagArgs = append(flagArgs, a)
+		} else {
+			posArgs = append(posArgs, a)
+		}
+	}
+	return flagArgs, posArgs
+}
+
 func runConnect(args []string) {
 	fs := flag.NewFlagSet("connect", flag.ExitOnError)
 	token := fs.String("token", "", "Authentication token")
@@ -110,16 +131,7 @@ func runConnect(args []string) {
 	insecure := fs.Bool("insecure", true, "Skip TLS cert verification")
 	fs.BoolVar(insecure, "k", true, "Skip TLS cert verification (shorthand)")
 
-	// Separate flags (starts with -) from positional arguments (like @root 5.202.5.134)
-	var flagArgs []string
-	var posArgs []string
-	for _, a := range args {
-		if strings.HasPrefix(a, "-") {
-			flagArgs = append(flagArgs, a)
-		} else {
-			posArgs = append(posArgs, a)
-		}
-	}
+	flagArgs, posArgs := splitFlagsAndPosArgs(args)
 
 	if err := fs.Parse(flagArgs); err != nil {
 		os.Exit(1)
@@ -196,15 +208,7 @@ func runExec(args []string) {
 	insecure := fs.Bool("insecure", true, "Skip TLS cert verification")
 	fs.BoolVar(insecure, "k", true, "Skip TLS cert verification (shorthand)")
 
-	var flagArgs []string
-	var posArgs []string
-	for _, a := range args {
-		if strings.HasPrefix(a, "-") {
-			flagArgs = append(flagArgs, a)
-		} else {
-			posArgs = append(posArgs, a)
-		}
-	}
+	flagArgs, posArgs := splitFlagsAndPosArgs(args)
 
 	if err := fs.Parse(flagArgs); err != nil {
 		os.Exit(1)
@@ -251,16 +255,54 @@ func runExec(args []string) {
 		os.Exit(1)
 	}
 
-	// Wait for execution result frame
-	resFrame := <-ch
-	if resFrame == nil {
+	// Wait for execution result frame; if server runs older daemon without FastExec, fallback to PTY
+	select {
+	case resFrame := <-ch:
+		if resFrame == nil {
+			return
+		}
+		if resFrame.Opcode == OpError {
+			fmt.Fprintf(os.Stderr, "❌ %s\n", string(resFrame.Payload))
+			os.Exit(1)
+		}
+		os.Stdout.Write(resFrame.Payload)
 		return
+
+	case <-time.After(1000 * time.Millisecond):
+		// Fallback for older daemons: execute via PTY stream
+		chPTY := client.RegisterStream(3)
+		defer client.UnregisterStream(3)
+
+		if err := client.Send(OpPTYSpawn, 3, []byte{0x00, 0x50, 0x00, 0x18}); err != nil {
+			fmt.Fprintf(os.Stderr, "❌ Spawn failed: %v\n", err)
+			os.Exit(1)
+		}
+
+		ack := <-chPTY
+		if ack == nil || ack.Opcode == OpError {
+			fmt.Fprintf(os.Stderr, "❌ Spawn rejected\n")
+			os.Exit(1)
+		}
+
+		// Send command with trailing newline and exit
+		payload := []byte(remoteCmd + "\nexit\n")
+		_ = client.Send(OpPTYData, 3, payload)
+
+		// Stream stdout live to terminal until closed or idle timeout
+		for {
+			select {
+			case frame, ok := <-chPTY:
+				if !ok || frame == nil || frame.Opcode == OpPTYClose {
+					return
+				}
+				if frame.Opcode == OpPTYData {
+					_, _ = os.Stdout.Write(frame.Payload)
+				}
+			case <-time.After(1200 * time.Millisecond):
+				return
+			}
+		}
 	}
-	if resFrame.Opcode == OpError {
-		fmt.Fprintf(os.Stderr, "❌ %s\n", string(resFrame.Payload))
-		os.Exit(1)
-	}
-	os.Stdout.Write(resFrame.Payload)
 }
 
 func runInfo(args []string) {
@@ -270,11 +312,12 @@ func runInfo(args []string) {
 	useTLS := fs.Bool("tls", true, "Use TLS 1.3 encryption")
 	insecure := fs.Bool("insecure", true, "Skip TLS cert verification")
 
-	if err := fs.Parse(args); err != nil {
+	flagArgs, posArgs := splitFlagsAndPosArgs(args)
+
+	if err := fs.Parse(flagArgs); err != nil {
 		os.Exit(1)
 	}
 
-	posArgs := fs.Args()
 	if len(posArgs) < 1 {
 		fmt.Fprintln(os.Stderr, "Error: Missing <host:port> address")
 		os.Exit(1)

@@ -181,5 +181,8 @@ func (m *PTYManager) readLoop(sess *PTYSession) {
 			break
 		}
 	}
+	m.connMu.Lock()
+	_ = WriteFrame(m.conn, OpPTYClose, sess.StreamID, nil)
+	m.connMu.Unlock()
 	m.Close(sess.StreamID)
 }
