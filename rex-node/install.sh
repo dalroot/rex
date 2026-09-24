@@ -34,8 +34,8 @@ case "$ARCH" in
   *) echo "Unsupported Architecture: $ARCH"; exit 1 ;;
 esac
 
-# Detect public IP address safely with fallback methods
-SERVER_IP=$(curl -s -4 --connect-timeout 3 ifconfig.me || curl -s -4 --connect-timeout 3 api.ipify.org || hostname -I | awk '{print $1}' || echo "UNKNOWN_IP")
+# Detect public IP address safely with fallback methods and regex validation
+SERVER_IP=$(curl -s -4 --connect-timeout 2 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | awk -F= '/ip/{print $2}' | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' || curl -s -4 --connect-timeout 2 https://api.ipify.org 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' || hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
 
 mkdir -p /usr/local/bin /etc/rex
 
@@ -67,12 +67,24 @@ fi
 chmod +x /usr/local/bin/rex-node.tmp
 mv -f /usr/local/bin/rex-node.tmp /usr/local/bin/rex-node
 
+# Generate Self-Signed TLS 1.3 Certificate if missing
+if [ ! -f /etc/rex/cert.pem ] || [ ! -f /etc/rex/key.pem ]; then
+  echo "🔐 Generating Self-Signed TLS 1.3 Certificate..."
+  openssl req -x509 -newkey rsa:2048 -nodes \
+    -keyout /etc/rex/key.pem \
+    -out /etc/rex/cert.pem \
+    -days 3650 \
+    -subj "/CN=rex-node" 2>/dev/null || true
+fi
+
 # Write Config
 cat > /etc/rex/config.yaml << EOF
 token: "${TOKEN}"
 port: ${PORT}
 tcp_port: ${TCP_PORT}
-tls: false
+tls: true
+cert_file: /etc/rex/cert.pem
+key_file: /etc/rex/key.pem
 allowlist: /etc/rex/allowlist.yaml
 log_level: info
 EOF
@@ -89,7 +101,7 @@ EOF
 # Setup CLI helper tool `/usr/local/bin/rex`
 cat > /usr/local/bin/rex << 'EOF'
 #!/bin/bash
-SERVER_IP=$(curl -s -4 --connect-timeout 3 ifconfig.me || hostname -I | awk '{print $1}')
+SERVER_IP=$(curl -s -4 --connect-timeout 2 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | awk -F= '/ip/{print $2}' | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' || curl -s -4 --connect-timeout 2 https://api.ipify.org 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' || hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
 CONFIG_FILE="/etc/rex/config.yaml"
 ALLOWLIST_FILE="/etc/rex/allowlist.yaml"
 

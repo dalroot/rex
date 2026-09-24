@@ -280,7 +280,11 @@ func runExec(args []string) {
 
 		ack := <-chPTY
 		if ack == nil || ack.Opcode == OpError {
-			fmt.Fprintf(os.Stderr, "❌ Spawn rejected\n")
+			errMsg := "Session spawn rejected by server"
+			if ack != nil && len(ack.Payload) > 0 {
+				errMsg = string(ack.Payload)
+			}
+			fmt.Fprintf(os.Stderr, "❌ Server rejected: %s\n", errMsg)
 			os.Exit(1)
 		}
 
