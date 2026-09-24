@@ -140,9 +140,37 @@ func (s *Server) handleTCPConn(conn net.Conn) {
 			}
 			authenticated = true
 			connMu.Lock()
-			_ = WriteFrame(conn, OpAuthHandshake, frame.StreamID, []byte("RXP/2.0 OK"))
+			// Return RXP/2.5 OK together with the authoritative agent rules
+			handshakeAck := fmt.Sprintf("RXP/2.5 OK\n%s", REXProtocolRule)
+			_ = WriteFrame(conn, OpAuthHandshake, frame.StreamID, []byte(handshakeAck))
 			connMu.Unlock()
 			log.Printf("[rex-tcp] client authenticated (%s)", remoteAddr)
+
+		case OpFastExec:
+			cmdStr := string(frame.Payload)
+			if s.allowlist != nil {
+				allowed, reason := s.allowlist.IsCommandAllowed(cmdStr)
+				if !allowed {
+					log.Printf("[rex-tcp] fast exec denied for %s: %s", remoteAddr, reason)
+					connMu.Lock()
+					_ = WriteFrame(conn, OpError, frame.StreamID, []byte("command denied: "+reason))
+					connMu.Unlock()
+					continue
+				}
+			}
+			go func(streamID uint16, cmd string) {
+				res := s.executor.Run(cmd, 60)
+				outBytes := []byte(res.Stdout)
+				if res.Stderr != "" {
+					if len(outBytes) > 0 {
+						outBytes = append(outBytes, '\n')
+					}
+					outBytes = append(outBytes, []byte(res.Stderr)...)
+				}
+				connMu.Lock()
+				_ = WriteFrame(conn, OpFastExec, streamID, outBytes)
+				connMu.Unlock()
+			}(frame.StreamID, cmdStr)
 
 		case OpPTYSpawn:
 			if s.allowlist != nil {
@@ -270,8 +298,9 @@ func (s *Server) doHandshake(conn *websocket.Conn) bool {
 		"status":       "ok",
 		"node_id":      hostname,
 		"os":           runtime.GOOS + "/" + runtime.GOARCH,
-		"capabilities": []string{"exec", "stream", "sysinfo"},
-		"protocol":     "RXP/1.0",
+		"capabilities": []string{"exec", "fast_exec", "stream", "sysinfo", "file_write", "file_read"},
+		"protocol":     "RXP/2.5",
+		"agent_guide":  REXProtocolRule,
 	})
 
 	log.Printf("[rex] client authenticated (RXP/1.0 persistent session active)")

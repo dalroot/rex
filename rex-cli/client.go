@@ -27,6 +27,7 @@ const (
 	OpPing          byte = 0x08
 	OpPong          byte = 0x09
 	OpAgentGuide    byte = 0x0A
+	OpFastExec      byte = 0x0B
 	OpError         byte = 0xFF
 )
 

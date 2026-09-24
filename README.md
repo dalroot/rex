@@ -141,6 +141,7 @@ All communications over TCP Port `7444` use the **RXP/2.0 Packed Binary Structur
 | `0x08` | `OP_PING` | C → S | Sent by agent to maintain channel keep-alive ping. |
 | `0x09` | `OP_PONG` | S → C | Sent by server in response to keep-alive ping. |
 | `0x0A` | `OP_AGENT_GUIDE` | C ↔ S | Returns the fundamental REX protocol rule directive. |
+| `0x0B` | `OP_FAST_EXEC` | C ↔ S | Direct sub-millisecond command execution bypassing PTY overhead. |
 | `0xFF` | `OP_ERROR` | S → C | Returns structured error payload frame. |
 
 ---

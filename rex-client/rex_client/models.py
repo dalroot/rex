@@ -10,7 +10,8 @@ class HandshakeInfo:
     node_id: str
     os: str
     capabilities: List[str]
-    protocol: str = "RXP/1.0"
+    protocol: str = "RXP/2.5"
+    agent_guide: Optional[str] = None
 
 
 @dataclass

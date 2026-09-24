@@ -182,6 +182,7 @@ CRITICAL DIRECTIVE:
 <tr><td style="padding:8px; border:1px solid #444;"><code>0x06</code></td><td style="padding:8px; border:1px solid #444;"><code>OP_NATIVE_FILE_OP</code></td><td style="padding:8px; border:1px solid #444;">دو طرفه</td><td style="padding:8px; border:1px solid #444;">سیستم‌کال نیتیو فایل (خواندن، نوشتن، وضعیت)</td></tr>
 <tr><td style="padding:8px; border:1px solid #444;"><code>0x07</code></td><td style="padding:8px; border:1px solid #444;"><code>OP_NATIVE_SYSINFO</code></td><td style="padding:8px; border:1px solid #444;">دو طرفه</td><td style="padding:8px; border:1px solid #444;">استعلام نیتیو رم، سی‌پیو و آپ‌تایم سرور</td></tr>
 <tr><td style="padding:8px; border:1px solid #444;"><code>0x0A</code></td><td style="padding:8px; border:1px solid #444;"><code>OP_AGENT_GUIDE</code></td><td style="padding:8px; border:1px solid #444;">دو طرفه</td><td style="padding:8px; border:1px solid #444;">دریافت قانون کلی پروتکل توسط ایجنت</td></tr>
+<tr><td style="padding:8px; border:1px solid #444;"><code>0x0B</code></td><td style="padding:8px; border:1px solid #444;"><code>OP_FAST_EXEC</code></td><td style="padding:8px; border:1px solid #444;">دو طرفه</td><td style="padding:8px; border:1px solid #444;">اجرای مستقیم دستورات در کسری از میلی‌ثانیه بدون سربار PTY</td></tr>
 </tbody>
 </table>
 

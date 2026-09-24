@@ -119,9 +119,10 @@ class REXClient:
             node_id=msg.get("node_id", "unknown"),
             os=msg.get("os", "unknown"),
             capabilities=msg.get("capabilities", []),
-            protocol=msg.get("protocol", "RXP/1.0"),
+            protocol=msg.get("protocol", "RXP/2.5"),
+            agent_guide=msg.get("agent_guide"),
         )
-        logger.info("Connected to %s (%s)", self._server_info.node_id, self._server_info.os)
+        logger.info("Connected to %s (%s, protocol=%s)", self._server_info.node_id, self._server_info.os, self._server_info.protocol)
 
         self._reader_task = asyncio.create_task(self._reader_loop())
         return self._server_info

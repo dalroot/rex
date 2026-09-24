@@ -102,11 +102,14 @@ class RXPDirectClient:
             err_msg = res.payload.decode("utf-8", errors="ignore") if res else "No response"
             self._writer.close()
             await self._writer.wait_closed()
-            raise ConnectionError(f"RXP/2.0 Auth failed: {err_msg}")
+            raise ConnectionError(f"RXP/2.5 Auth failed: {err_msg}")
+
+        auth_msg = res.payload.decode("utf-8", errors="ignore")
+        self.server_guide = auth_msg
+        logger.info(f"Connected and authenticated to REX Server runtime at {self.host}:{self.port} ->\n{auth_msg}")
 
         self._is_connected = True
         self._listen_task = asyncio.create_task(self._read_loop())
-        logger.info(f"Connected and authenticated to REX Server runtime at {self.host}:{self.port}")
 
     async def disconnect(self):
         """Close connection and background listeners."""
@@ -225,6 +228,28 @@ class RXPDirectClient:
 
         res_frame = await asyncio.wait_for(fut, timeout=self.timeout)
         return res_frame.payload.decode("utf-8")
+
+    async def fast_exec(self, command: str, timeout: Optional[float] = None) -> str:
+        """Execute command directly with sub-millisecond start latency (No PTY allocation overhead)."""
+        stream_id = self._next_stream_id
+        self._next_stream_id += 1
+
+        fut = asyncio.Future()
+        self._pending_rpc[stream_id] = fut
+
+        frame = RXPFrame(
+            version=VERSION_2,
+            opcode=OP_FAST_EXEC,
+            stream_id=stream_id,
+            payload=command.encode("utf-8"),
+        )
+        self._writer.write(frame.encode())
+        await self._writer.drain()
+
+        res_frame = await asyncio.wait_for(fut, timeout=timeout or self.timeout)
+        if res_frame.opcode == OP_ERROR:
+            raise RuntimeError(f"Command denied: {res_frame.payload.decode('utf-8', errors='ignore')}")
+        return res_frame.payload.decode("utf-8", errors="replace")
 
     async def write_file(self, remote_path: str, content: Union[str, bytes], mode: int = 0o644) -> dict:
         """Write content directly to remote file via native OS syscall."""

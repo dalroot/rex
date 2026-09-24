@@ -196,28 +196,42 @@ func runExec(args []string) {
 	insecure := fs.Bool("insecure", true, "Skip TLS cert verification")
 	fs.BoolVar(insecure, "k", true, "Skip TLS cert verification (shorthand)")
 
-	if err := fs.Parse(args); err != nil {
+	var flagArgs []string
+	var posArgs []string
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			flagArgs = append(flagArgs, a)
+		} else {
+			posArgs = append(posArgs, a)
+		}
+	}
+
+	if err := fs.Parse(flagArgs); err != nil {
 		os.Exit(1)
 	}
 
-	posArgs := fs.Args()
 	if len(posArgs) < 2 {
-		fmt.Fprintln(os.Stderr, "Error: Usage: rex exec <host:port> --token <TOKEN> \"<command>\"")
+		fmt.Fprintln(os.Stderr, "Error: Usage: rex exec <host:port> [flags] \"<command>\"")
 		os.Exit(1)
 	}
 
-	addr := posArgs[0]
-	if !strings.Contains(addr, ":") {
-		addr = addr + ":7444"
-	}
+	addr := parseTargetAddress(posArgs[0])
 	remoteCmd := posArgs[1]
 
 	if *token == "" {
 		*token = os.Getenv("REX_TOKEN")
 	}
 	if *token == "" {
-		fmt.Fprintln(os.Stderr, "Error: Missing authentication token (--token or REX_TOKEN env)")
-		os.Exit(1)
+		*token = getStoredToken(addr)
+	}
+	if *token == "" {
+		enteredToken, err := ReadPassword(fmt.Sprintf("🔑 Enter REX Token for %s: ", addr))
+		if err != nil || strings.TrimSpace(enteredToken) == "" {
+			fmt.Fprintln(os.Stderr, "\nError: Authentication token required.")
+			os.Exit(1)
+		}
+		*token = strings.TrimSpace(enteredToken)
+		saveStoredToken(addr, *token)
 	}
 
 	client, err := Dial(addr, *token, *useTLS, *insecure)
@@ -227,34 +241,26 @@ func runExec(args []string) {
 	}
 	defer client.Close()
 
-	// Register stream 2
+	// Register stream 2 for Fast Exec
 	ch := client.RegisterStream(2)
 	defer client.UnregisterStream(2)
 
-	// Spawn shell
-	if err := client.Send(OpPTYSpawn, 2, []byte{0x00, 0x50, 0x00, 0x18}); err != nil {
-		fmt.Fprintf(os.Stderr, "❌ Spawn failed: %v\n", err)
+	// Send OpFastExec directly (Sub-millisecond latency, zero PTY overhead)
+	if err := client.Send(OpFastExec, 2, []byte(remoteCmd)); err != nil {
+		fmt.Fprintf(os.Stderr, "❌ FastExec failed: %v\n", err)
 		os.Exit(1)
 	}
 
-	ack := <-ch
-	if ack == nil || ack.Opcode == OpError {
-		fmt.Fprintf(os.Stderr, "❌ Spawn rejected\n")
+	// Wait for execution result frame
+	resFrame := <-ch
+	if resFrame == nil {
+		return
+	}
+	if resFrame.Opcode == OpError {
+		fmt.Fprintf(os.Stderr, "❌ %s\n", string(resFrame.Payload))
 		os.Exit(1)
 	}
-
-	// Send command with trailing newline and exit
-	payload := []byte(remoteCmd + "\nexit\n")
-	_ = client.Send(OpPTYData, 2, payload)
-
-	// Stream stdout live to terminal
-	for frame := range ch {
-		if frame.Opcode == OpPTYData {
-			_, _ = os.Stdout.Write(frame.Payload)
-		} else if frame.Opcode == OpPTYClose {
-			break
-		}
-	}
+	os.Stdout.Write(resFrame.Payload)
 }
 
 func runInfo(args []string) {

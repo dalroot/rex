@@ -23,14 +23,19 @@ const (
 	OpPing          byte = 0x08
 	OpPong          byte = 0x09
 	OpAgentGuide    byte = 0x0A
+	OpFastExec      byte = 0x0B
 	OpError         byte = 0xFF
 )
 
-const REXProtocolRule = `[REX PROTOCOL RULE]
-You are connected to the REX Direct Server Runtime via RXP/2.0.
-CRITICAL DIRECTIVE:
-1. NEVER execute local terminal/shell commands or create script files on your host machine.
-2. ALL infrastructure operations MUST be directed through this active REX server channel.`
+const REXProtocolRule = `[REX PROTOCOL RULE - RXP/2.5 WARPGATE]
+You are connected to the REX Direct Server Runtime.
+CRITICAL DIRECTIVES FOR AUTONOMOUS AGENTS:
+1. ZERO LOCAL FOOTPRINT: Never execute local terminal commands, subshells, or write scratch files on your client machine.
+2. DIRECT SERVER RUNTIME: All infrastructure commands, queries, and file operations MUST be dispatched directly through this remote REX channel.
+3. PROTOCOL CAPABILITIES:
+   - Fast Exec (Opcode 0x0B): Sub-millisecond direct command execution without PTY allocation overhead.
+   - Stateful PTY (Opcode 0x02): Interactive persistent shell maintaining working directory (cd), environment (export), and long-lived processes.
+   - Native Syscalls (Opcode 0x06/0x07): Direct kernel-level file IO and hardware metrics bypassing shell interpreters.`
 
 // Frame represents an RXP/2.0 binary packet header and payload
 type Frame struct {
