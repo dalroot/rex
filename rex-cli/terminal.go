@@ -90,6 +90,52 @@ func setTermios(fd int, termios *syscall.Termios) error {
 	return nil
 }
 
+// ReadPassword prompts the user and securely reads a password without echoing characters to screen
+func ReadPassword(prompt string) (string, error) {
+	fmt.Print(prompt)
+	stdinFd := int(os.Stdin.Fd())
+
+	termios, err := getTermios(stdinFd)
+	if err == nil {
+		oldState := *termios
+		// Disable ECHO
+		termios.Lflag &^= syscall.ECHO
+		_ = setTermios(stdinFd, termios)
+		defer func() {
+			_ = setTermios(stdinFd, &oldState)
+			fmt.Println()
+		}()
+	}
+
+	var pass []byte
+	buf := make([]byte, 1)
+	for {
+		n, err := os.Stdin.Read(buf)
+		if n > 0 {
+			b := buf[0]
+			if b == '\n' || b == '\r' {
+				break
+			}
+			// Handle backspace
+			if b == 0x7f || b == 0x08 {
+				if len(pass) > 0 {
+					pass = pass[:len(pass)-1]
+				}
+				continue
+			}
+			// Ctrl+C
+			if b == 0x03 {
+				return "", fmt.Errorf("interrupted")
+			}
+			pass = append(pass, b)
+		}
+		if err != nil {
+			break
+		}
+	}
+	return string(pass), nil
+}
+
 // InteractiveTerminal attaches the local user terminal to a remote PTY session on the server
 func InteractiveTerminal(client *Client, streamID uint16) error {
 	stdinFd := int(os.Stdin.Fd())

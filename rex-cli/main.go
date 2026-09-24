@@ -64,8 +64,8 @@ func main() {
 		runInfo(os.Args[2:])
 
 	default:
-		// If first arg looks like host:port, treat as shortcut for 'rex connect'
-		if strings.Contains(command, ":") {
+		// If first arg looks like host, host:port, @user, or user@host, treat as shortcut for 'rex connect'
+		if strings.Contains(command, ":") || strings.Contains(command, "@") || strings.Count(command, ".") >= 2 {
 			runConnect(os.Args[1:])
 			return
 		}
@@ -73,6 +73,31 @@ func main() {
 		printUsage()
 		os.Exit(1)
 	}
+}
+
+func parseTargetAddress(input string) string {
+	target := strings.TrimSpace(input)
+
+	// Format 1: @root 5.202.5.134 -> handled by checking caller args, but if target has @prefix:
+	if strings.HasPrefix(target, "@") {
+		// e.g. @root: stripped
+		target = strings.TrimPrefix(target, "@")
+		if idx := strings.Index(target, " "); idx != -1 {
+			target = target[idx+1:]
+		}
+	}
+
+	// Format 2: root@5.202.5.134 or @5.202.5.134
+	if strings.Contains(target, "@") {
+		parts := strings.SplitN(target, "@", 2)
+		target = parts[1]
+	}
+
+	target = strings.TrimSpace(target)
+	if !strings.Contains(target, ":") {
+		target = target + ":7444"
+	}
+	return target
 }
 
 func runConnect(args []string) {
@@ -90,21 +115,35 @@ func runConnect(args []string) {
 	posArgs := fs.Args()
 	if len(posArgs) < 1 {
 		fmt.Fprintln(os.Stderr, "Error: Missing <host:port> address")
-		fmt.Fprintln(os.Stderr, "Example: rex connect 5.202.5.134:7444 --token <TOKEN>")
+		fmt.Fprintln(os.Stderr, "Examples:")
+		fmt.Fprintln(os.Stderr, "  rex @root 5.202.5.134")
+		fmt.Fprintln(os.Stderr, "  rex root@5.202.5.134")
+		fmt.Fprintln(os.Stderr, "  rex connect 5.202.5.134:7444")
 		os.Exit(1)
 	}
 
-	addr := posArgs[0]
-	if !strings.Contains(addr, ":") {
-		addr = addr + ":7444"
+	var rawAddr string
+	// Check if user passed: rex @root 5.202.5.134 (two positional arguments)
+	if len(posArgs) >= 2 && (strings.HasPrefix(posArgs[0], "@") || posArgs[0] == "root") {
+		rawAddr = posArgs[1]
+	} else {
+		rawAddr = posArgs[0]
 	}
+
+	addr := parseTargetAddress(rawAddr)
 
 	if *token == "" {
 		*token = os.Getenv("REX_TOKEN")
 	}
+
+	// If token is still empty, prompt the user securely (like SSH password prompt)!
 	if *token == "" {
-		fmt.Fprintln(os.Stderr, "Error: Missing authentication token (--token or REX_TOKEN env)")
-		os.Exit(1)
+		enteredToken, err := ReadPassword(fmt.Sprintf("🔑 Enter REX Token for %s: ", addr))
+		if err != nil || strings.TrimSpace(enteredToken) == "" {
+			fmt.Fprintln(os.Stderr, "\nError: Authentication token required.")
+			os.Exit(1)
+		}
+		*token = strings.TrimSpace(enteredToken)
 	}
 
 	fmt.Printf("⚡ Connecting to %s (TLS 1.3: %v)...\n", addr, *useTLS)
