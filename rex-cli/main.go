@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -146,6 +148,14 @@ func runConnect(args []string) {
 		*token = os.Getenv("REX_TOKEN")
 	}
 
+	// Check local saved token cache (~/.rex/tokens.json)
+	if *token == "" {
+		*token = getStoredToken(addr)
+		if *token != "" {
+			fmt.Printf("🔑 Using saved token for %s\n", addr)
+		}
+	}
+
 	// If token is still empty, prompt the user securely (like SSH password prompt)!
 	if *token == "" {
 		enteredToken, err := ReadPassword(fmt.Sprintf("🔑 Enter REX Token for %s: ", addr))
@@ -154,6 +164,8 @@ func runConnect(args []string) {
 			os.Exit(1)
 		}
 		*token = strings.TrimSpace(enteredToken)
+		// Save for future connections
+		saveStoredToken(addr, *token)
 	}
 
 	fmt.Printf("⚡ Connecting to %s (TLS 1.3: %v)...\n", addr, *useTLS)
@@ -285,5 +297,47 @@ func runInfo(args []string) {
 	frame := <-ch
 	if frame != nil {
 		fmt.Println(string(frame.Payload))
+	}
+}
+
+func getTokensFilePath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	dir := filepath.Join(home, ".rex")
+	_ = os.MkdirAll(dir, 0700)
+	return filepath.Join(dir, "tokens.json")
+}
+
+func getStoredToken(addr string) string {
+	file := getTokensFilePath()
+	if file == "" {
+		return ""
+	}
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return ""
+	}
+	var store map[string]string
+	if err := json.Unmarshal(data, &store); err != nil {
+		return ""
+	}
+	return store[addr]
+}
+
+func saveStoredToken(addr, token string) {
+	file := getTokensFilePath()
+	if file == "" {
+		return
+	}
+	store := make(map[string]string)
+	if data, err := os.ReadFile(file); err == nil {
+		_ = json.Unmarshal(data, &store)
+	}
+	store[addr] = token
+	data, err := json.MarshalIndent(store, "", "  ")
+	if err == nil {
+		_ = os.WriteFile(file, data, 0600)
 	}
 }

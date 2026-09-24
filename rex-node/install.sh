@@ -24,7 +24,7 @@ if [[ -z "$TOKEN" ]]; then
   TOKEN=$(openssl rand -hex 16 2>/dev/null || date +%s | md5sum | head -c 32)
 fi
 
-echo "⚡ Installing REX Node Daemon (RXP/2.0 v2.0.0)..."
+echo "⚡ Installing REX Node Daemon (RXP/2.5 v2.5.0)..."
 
 # Check architecture
 ARCH=$(uname -m)
@@ -45,8 +45,8 @@ pkill -f rex-node 2>/dev/null || true
 rm -f /usr/local/bin/rex-node.tmp
 
 # Download pre-compiled binary safely via GitHub Release redirects
-DOWNLOAD_URL="https://github.com/dalroot/rex/releases/download/v2.0.0/${BINARY_NAME}"
-CHECKSUM_URL="https://github.com/dalroot/rex/releases/download/v2.0.0/${BINARY_NAME}.sha256"
+DOWNLOAD_URL="https://github.com/dalroot/rex/releases/download/v2.5.0/${BINARY_NAME}"
+CHECKSUM_URL="https://github.com/dalroot/rex/releases/download/v2.5.0/${BINARY_NAME}.sha256"
 
 curl -L -f -s -S "$DOWNLOAD_URL" -o /usr/local/bin/rex-node.tmp
 
@@ -143,10 +143,11 @@ case "$1" in
     TOKEN=$(grep "token:" "$CONFIG_FILE" | awk '{print $2}' | tr -d '"')
     MODE=$(grep "^mode:" "$ALLOWLIST_FILE" | awk '{print $2}' | tr -d '"')
     echo "=========================================="
-    echo " 📍 REX Node Status & Info"
+    echo " 📍 REX Node Status & Info (RXP/2.5 WarpGate)"
     echo "=========================================="
     echo " Server IP: $SERVER_IP"
-    echo " Port:      7443"
+    echo " RXP TCP:   7444"
+    echo " Web Port:  7443"
     echo " Mode:      ${MODE:-autonomous}"
     echo " Token:     $TOKEN"
     echo "=========================================="
@@ -192,15 +193,17 @@ EOF
 systemctl daemon-reload
 systemctl enable --now rex-node
 
-# Open firewall port 7443 if ufw or iptables exist
+# Open firewall ports 7443 and 7444 if ufw or iptables exist
 ufw allow 7443/tcp 2>/dev/null || iptables -A INPUT -p tcp --dport 7443 -j ACCEPT 2>/dev/null || true
+ufw allow 7444/tcp 2>/dev/null || iptables -A INPUT -p tcp --dport 7444 -j ACCEPT 2>/dev/null || true
 
 echo ""
 echo "===================================================="
 echo " ✅ REX Node installed and running successfully!"
 echo "===================================================="
 echo " ├─ Server IP: ${SERVER_IP}"
-echo " ├─ Port:      ${PORT}"
+echo " ├─ RXP TCP:   ${TCP_PORT}"
+echo " ├─ Web Port:  ${PORT}"
 echo " ├─ Mode:      ${MODE}"
 echo " └─ Token:     ${TOKEN}"
 echo "===================================================="

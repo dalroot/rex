@@ -28,12 +28,28 @@ jobs:
         run: |
           cd rex-node
           go mod tidy
+          cd ../rex-cli
+          go mod tidy
 
       - name: Build Linux amd64 & arm64
         run: |
+          mkdir -p dist
+          # Build rex-node daemon
           cd rex-node
           GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ../dist/rex-node-linux-amd64 .
           GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o ../dist/rex-node-linux-arm64 .
+          cd ../rex-cli
+          # Build rex-cli interactive client
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o ../dist/rex-linux-amd64 .
+          GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o ../dist/rex-linux-arm64 .
+          cd ..
+          # Generate SHA-256 checksums
+          cd dist
+          sha256sum rex-node-linux-amd64 > rex-node-linux-amd64.sha256
+          sha256sum rex-node-linux-arm64 > rex-node-linux-arm64.sha256
+          sha256sum rex-linux-amd64 > rex-linux-amd64.sha256
+          sha256sum rex-linux-arm64 > rex-linux-arm64.sha256
+          cd ..
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -53,14 +69,20 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ env.REPO_LOWER }}/rex-node:latest
-            ghcr.io/${{ env.REPO_LOWER }}/rex-node:v2.0.0
+            ghcr.io/${{ env.REPO_LOWER }}/rex-node:v2.5.0
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
-          tag_name: ${{ github.ref_name || 'v2.0.0' }}
-          name: REX Release ${{ github.ref_name || 'v2.0.0' }}
+          tag_name: ${{ github.ref_name || 'v2.5.0' }}
+          name: REX Release ${{ github.ref_name || 'v2.5.0' }}
           files: |
             dist/rex-node-linux-amd64
+            dist/rex-node-linux-amd64.sha256
             dist/rex-node-linux-arm64
+            dist/rex-node-linux-arm64.sha256
+            dist/rex-linux-amd64
+            dist/rex-linux-amd64.sha256
+            dist/rex-linux-arm64
+            dist/rex-linux-arm64.sha256
