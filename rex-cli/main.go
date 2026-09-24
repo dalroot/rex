@@ -108,11 +108,21 @@ func runConnect(args []string) {
 	insecure := fs.Bool("insecure", true, "Skip TLS cert verification")
 	fs.BoolVar(insecure, "k", true, "Skip TLS cert verification (shorthand)")
 
-	if err := fs.Parse(args); err != nil {
+	// Separate flags (starts with -) from positional arguments (like @root 5.202.5.134)
+	var flagArgs []string
+	var posArgs []string
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			flagArgs = append(flagArgs, a)
+		} else {
+			posArgs = append(posArgs, a)
+		}
+	}
+
+	if err := fs.Parse(flagArgs); err != nil {
 		os.Exit(1)
 	}
 
-	posArgs := fs.Args()
 	if len(posArgs) < 1 {
 		fmt.Fprintln(os.Stderr, "Error: Missing <host:port> address")
 		fmt.Fprintln(os.Stderr, "Examples:")
