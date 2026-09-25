@@ -50,7 +50,12 @@ func (e *Executor) Run(command string, timeoutSecs int) ExecResult {
 	}
 
 	start := time.Now()
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	var cmd *exec.Cmd
+	if strings.ContainsAny(command, "|;&><$`") || strings.Contains(command, "&&") || strings.Contains(command, "||") {
+		cmd = exec.CommandContext(ctx, "/bin/sh", "-c", command)
+	} else {
+		cmd = exec.CommandContext(ctx, args[0], args[1:]...)
+	}
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
