@@ -34,8 +34,29 @@ case "$ARCH" in
   *) echo "Unsupported Architecture: $ARCH"; exit 1 ;;
 esac
 
-# Detect public IP address safely with fallback methods and regex validation
-SERVER_IP=$(curl -s -4 --connect-timeout 2 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | awk -F= '/ip/{print $2}' | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' || curl -s -4 --connect-timeout 2 https://api.ipify.org 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' || hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
+# Detect public inbound IP address: prioritize interface IP, then fallback to diverse reflectors
+echo "🔍 Detecting public server IP address..."
+INTERFACE_IP=$(ip -4 addr show scope global 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -vE '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|127\.|169\.254\.)' | head -n 1)
+
+if [ -n "$INTERFACE_IP" ]; then
+  SERVER_IP="$INTERFACE_IP"
+  echo "✅ Inbound Public IP detected directly on network interface: ${SERVER_IP}"
+else
+  for REFLECTOR in \
+    "https://api4.ipify.org" \
+    "https://icanhazip.com" \
+    "https://ifconfig.io/ip" \
+    "https://1.1.1.1/cdn-cgi/trace"
+  do
+    DETECTED=$(curl -s -4 --connect-timeout 2 "$REFLECTOR" 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -n 1)
+    if [ -n "$DETECTED" ]; then
+      SERVER_IP="$DETECTED"
+      break
+    fi
+  done
+  SERVER_IP="${SERVER_IP:-127.0.0.1}"
+  echo "✅ Detected Public IP: ${SERVER_IP}"
+fi
 
 mkdir -p /usr/local/bin /etc/rex
 
@@ -101,7 +122,8 @@ EOF
 # Setup CLI helper tool `/usr/local/bin/rex`
 cat > /usr/local/bin/rex << 'EOF'
 #!/bin/bash
-SERVER_IP=$(curl -s -4 --connect-timeout 2 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | awk -F= '/ip/{print $2}' | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' || curl -s -4 --connect-timeout 2 https://api.ipify.org 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' || hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
+INTERFACE_IP=$(ip -4 addr show scope global 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -vE '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|127\.|169\.254\.)' | head -n 1)
+SERVER_IP="${INTERFACE_IP:-$(curl -s -4 --connect-timeout 2 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | awk -F= '/ip/{print $2}' | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' || curl -s -4 --connect-timeout 2 https://api4.ipify.org 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' || hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")}"
 CONFIG_FILE="/etc/rex/config.yaml"
 ALLOWLIST_FILE="/etc/rex/allowlist.yaml"
 

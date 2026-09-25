@@ -139,6 +139,7 @@ func (m *PTYManager) Close(streamID uint16) {
 			_ = sess.ptyFile.Close()
 			if sess.cmd.Process != nil {
 				_ = sess.cmd.Process.Kill()
+				go func() { _ = sess.cmd.Wait() }() // Reaps process so it never becomes a zombie
 			}
 		}
 		sess.mu.Unlock()
@@ -158,6 +159,7 @@ func (m *PTYManager) CloseAll() {
 			_ = sess.ptyFile.Close()
 			if sess.cmd.Process != nil {
 				_ = sess.cmd.Process.Kill()
+				go func() { _ = sess.cmd.Wait() }() // Reaps process
 			}
 		}
 		sess.mu.Unlock()
@@ -184,5 +186,6 @@ func (m *PTYManager) readLoop(sess *PTYSession) {
 	m.connMu.Lock()
 	_ = WriteFrame(m.conn, OpPTYClose, sess.StreamID, nil)
 	m.connMu.Unlock()
+	go func() { _ = sess.cmd.Wait() }() // Ensure child bash process is reaped from kernel
 	m.Close(sess.StreamID)
 }
