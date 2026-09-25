@@ -207,6 +207,8 @@ func runExec(args []string) {
 	useTLS := fs.Bool("tls", true, "Use TLS 1.3 encryption")
 	insecure := fs.Bool("insecure", true, "Skip TLS cert verification")
 	fs.BoolVar(insecure, "k", true, "Skip TLS cert verification (shorthand)")
+	raw := fs.Bool("raw", false, "Output raw payload without terminal framing")
+	fs.BoolVar(raw, "r", false, "Output raw payload (shorthand)")
 
 	flagArgs, posArgs := splitFlagsAndPosArgs(args)
 
@@ -243,6 +245,8 @@ func runExec(args []string) {
 		saveStoredToken(addr, *token)
 	}
 
+	execStart := time.Now()
+
 	client, err := Dial(addr, *token, *useTLS, *insecure)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "❌ Connection failed to %s: %v\n", addr, err)
@@ -254,13 +258,24 @@ func runExec(args []string) {
 	}
 	defer client.Close()
 
+	if !*raw {
+		fmt.Printf("┌── ⚡ REX [%s]\n", addr)
+		fmt.Printf("│ ❯ %s\n", remoteCmd)
+		fmt.Println("├── OUTPUT ──────────────────────────────────────────────────────────")
+	}
+
 	// Register stream 2 for Fast Exec
 	ch := client.RegisterStream(2)
 	defer client.UnregisterStream(2)
 
 	// Send OpFastExec directly (Sub-millisecond latency, zero PTY overhead)
 	if err := client.Send(OpFastExec, 2, []byte(remoteCmd)); err != nil {
-		fmt.Fprintf(os.Stderr, "❌ FastExec failed: %v\n", err)
+		if !*raw {
+			fmt.Fprintf(os.Stderr, "❌ FastExec failed: %v\n", err)
+			fmt.Printf("└── [Elapsed: %v | Status: FAILED] ─────────────────────────────────\n", time.Since(execStart).Round(time.Millisecond))
+		} else {
+			fmt.Fprintf(os.Stderr, "❌ FastExec failed: %v\n", err)
+		}
 		os.Exit(1)
 	}
 
@@ -268,13 +283,32 @@ func runExec(args []string) {
 	select {
 	case resFrame := <-ch:
 		if resFrame == nil {
+			if !*raw {
+				fmt.Printf("└── [Elapsed: %v | Status: DISCONNECTED] ───────────────────────────\n", time.Since(execStart).Round(time.Millisecond))
+			}
 			return
 		}
 		if resFrame.Opcode == OpError {
-			fmt.Fprintf(os.Stderr, "❌ %s\n", string(resFrame.Payload))
+			if !*raw {
+				fmt.Fprintf(os.Stderr, "❌ %s\n", string(resFrame.Payload))
+				fmt.Printf("└── [Elapsed: %v | Status: FAILED] ─────────────────────────────────\n", time.Since(execStart).Round(time.Millisecond))
+			} else {
+				fmt.Fprintf(os.Stderr, "❌ %s\n", string(resFrame.Payload))
+			}
 			os.Exit(1)
 		}
-		os.Stdout.Write(resFrame.Payload)
+		if *raw {
+			os.Stdout.Write(resFrame.Payload)
+		} else {
+			out := string(resFrame.Payload)
+			if len(out) > 0 {
+				if !strings.HasSuffix(out, "\n") {
+					out += "\n"
+				}
+				os.Stdout.WriteString(out)
+			}
+			fmt.Printf("└── [Elapsed: %v | Status: OK] ─────────────────────────────────────\n", time.Since(execStart).Round(time.Millisecond))
+		}
 		return
 
 	case <-time.After(1000 * time.Millisecond):
@@ -283,7 +317,12 @@ func runExec(args []string) {
 		defer client.UnregisterStream(3)
 
 		if err := client.Send(OpPTYSpawn, 3, []byte{0x00, 0x50, 0x00, 0x18}); err != nil {
-			fmt.Fprintf(os.Stderr, "❌ Spawn failed: %v\n", err)
+			if !*raw {
+				fmt.Fprintf(os.Stderr, "❌ Spawn failed: %v\n", err)
+				fmt.Printf("└── [Elapsed: %v | Status: FAILED] ─────────────────────────────────\n", time.Since(execStart).Round(time.Millisecond))
+			} else {
+				fmt.Fprintf(os.Stderr, "❌ Spawn failed: %v\n", err)
+			}
 			os.Exit(1)
 		}
 
@@ -293,7 +332,12 @@ func runExec(args []string) {
 			if ack != nil && len(ack.Payload) > 0 {
 				errMsg = string(ack.Payload)
 			}
-			fmt.Fprintf(os.Stderr, "❌ Server rejected: %s\n", errMsg)
+			if !*raw {
+				fmt.Fprintf(os.Stderr, "❌ Server rejected: %s\n", errMsg)
+				fmt.Printf("└── [Elapsed: %v | Status: FAILED] ─────────────────────────────────\n", time.Since(execStart).Round(time.Millisecond))
+			} else {
+				fmt.Fprintf(os.Stderr, "❌ Server rejected: %s\n", errMsg)
+			}
 			os.Exit(1)
 		}
 
@@ -306,12 +350,18 @@ func runExec(args []string) {
 			select {
 			case frame, ok := <-chPTY:
 				if !ok || frame == nil || frame.Opcode == OpPTYClose {
+					if !*raw {
+						fmt.Printf("\n└── [Elapsed: %v | Status: PTY OK] ─────────────────────────────────\n", time.Since(execStart).Round(time.Millisecond))
+					}
 					return
 				}
 				if frame.Opcode == OpPTYData {
 					_, _ = os.Stdout.Write(frame.Payload)
 				}
 			case <-time.After(1200 * time.Millisecond):
+				if !*raw {
+					fmt.Printf("\n└── [Elapsed: %v | Status: PTY TIMEOUT] ────────────────────────────\n", time.Since(execStart).Round(time.Millisecond))
+				}
 				return
 			}
 		}
