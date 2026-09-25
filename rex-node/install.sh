@@ -20,6 +20,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$TOKEN" ]] && [[ -f /etc/rex/config.yaml ]]; then
+  TOKEN=$(grep "token:" /etc/rex/config.yaml 2>/dev/null | awk '{print $2}' | tr -d '"')
+fi
+
 if [[ -z "$TOKEN" ]]; then
   TOKEN=$(openssl rand -hex 16 2>/dev/null || date +%s | md5sum | head -c 32)
 fi
@@ -186,6 +190,20 @@ case "$1" in
     echo " Token:     $TOKEN"
     echo "=========================================="
     ;;
+  update)
+    echo "🔄 Updating REX Node daemon to latest version..."
+    ARCH=$(uname -m)
+    case "$ARCH" in
+      x86_64)        BINARY_NAME="rex-node-linux-amd64" ;;
+      aarch64|arm64) BINARY_NAME="rex-node-linux-arm64" ;;
+      *) echo "❌ Unsupported Architecture: $ARCH"; exit 1 ;;
+    esac
+    curl -L -f -s -S "https://github.com/dalroot/rex/releases/download/v2.5.0/${BINARY_NAME}" -o /usr/local/bin/rex-node.tmp
+    chmod +x /usr/local/bin/rex-node.tmp
+    mv -f /usr/local/bin/rex-node.tmp /usr/local/bin/rex-node
+    systemctl restart rex-node
+    echo "✅ REX Node daemon successfully updated and restarted."
+    ;;
   uninstall|remove)
     echo "⚠️ Removing REX Node from server..."
     systemctl stop rex-node 2>/dev/null || true
@@ -202,6 +220,7 @@ case "$1" in
     echo "  rex info                                Display IP, port, mode & token"
     echo "  rex status                              Check daemon status"
     echo "  rex restart                             Restart daemon"
+    echo "  rex update                              Update daemon to latest release"
     echo "  rex logs                                Stream live logs"
     echo "  rex uninstall                           Remove REX completely"
     ;;
