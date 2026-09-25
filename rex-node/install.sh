@@ -33,8 +33,14 @@ echo "⚡ Installing REX Node Daemon (RXP/2.5 v2.5.0)..."
 # Check architecture
 ARCH=$(uname -m)
 case "$ARCH" in
-  x86_64)  BINARY_NAME="rex-node-linux-amd64" ;;
-  aarch64) BINARY_NAME="rex-node-linux-arm64" ;;
+  x86_64)
+    BINARY_NAME="rex-node-linux-amd64"
+    CLI_BINARY_NAME="rex-linux-amd64"
+    ;;
+  aarch64|arm64)
+    BINARY_NAME="rex-node-linux-arm64"
+    CLI_BINARY_NAME="rex-linux-arm64"
+    ;;
   *) echo "Unsupported Architecture: $ARCH"; exit 1 ;;
 esac
 
@@ -123,7 +129,13 @@ denied_commands:
   - "mkfs"
 EOF
 
-# Setup CLI helper tool `/usr/local/bin/rex`
+# Setup CLI tool `/usr/local/bin/rex`
+echo "📦 Installing native REX CLI into /usr/local/bin/rex..."
+CLI_DOWNLOAD_URL="https://github.com/dalroot/rex/releases/download/v2.5.0/${CLI_BINARY_NAME}"
+if curl -L -f -s -S "$CLI_DOWNLOAD_URL" -o /usr/local/bin/rex.tmp 2>/dev/null; then
+  chmod +x /usr/local/bin/rex.tmp
+  mv -f /usr/local/bin/rex.tmp /usr/local/bin/rex
+else
 cat > /usr/local/bin/rex << 'EOF'
 #!/bin/bash
 INTERFACE_IP=$(ip -4 addr show scope global 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -vE '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|127\.|169\.254\.)' | head -n 1)
@@ -227,6 +239,7 @@ case "$1" in
 esac
 EOF
 chmod +x /usr/local/bin/rex
+fi
 
 # Setup Systemd Service
 cat > /etc/systemd/system/rex-node.service << EOF
