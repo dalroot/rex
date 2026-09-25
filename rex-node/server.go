@@ -49,6 +49,7 @@ func (s *Server) Start() error {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "rex-node ok")
 	})
+	mux.HandleFunc("/", s.handleAgentHTTPProbe)
 
 	addr := fmt.Sprintf(":%d", s.cfg.Port)
 	log.Printf("[rex] WebSocket listening on %s", addr)
@@ -239,6 +240,38 @@ func (s *Server) handleTCPConn(conn net.Conn) {
 			log.Printf("[rex-tcp] unknown opcode: 0x%02x", frame.Opcode)
 		}
 	}
+}
+
+func (s *Server) handleAgentHTTPProbe(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/health" {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "rex-node ok")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+
+	guide := map[string]interface{}{
+		"service":     "REX Node Daemon (RXP/2.5 WarpGate)",
+		"version":     "2.5.0",
+		"status":      "online",
+		"protocol":    "RXP (Remote EXecution Protocol)",
+		"instruction": "This is an agent-native infrastructure runtime, NOT a REST API or SSH. Do not probe HTTP endpoints.",
+		"quickstart": map[string]string{
+			"exec_command":         "rex exec <SERVER_IP>:7444 -t <TOKEN> \"<command>\"",
+			"interactive_terminal": "rex connect <SERVER_IP>:7444 -t <TOKEN>",
+			"install_rex_cli":      "curl -fsSL https://raw.githubusercontent.com/dalroot/rex/master/install-cli.sh | bash",
+			"python_sdk":           "from rex_client import RXPDirectClient",
+		},
+		"ports": map[string]interface{}{
+			"binary_tcp_tls": s.cfg.TCPPort,
+			"websocket_tls":  s.cfg.Port,
+		},
+		"documentation": "https://github.com/dalroot/rex",
+	}
+
+	_ = json.NewEncoder(w).Encode(guide)
 }
 
 func (s *Server) handleConnection(w http.ResponseWriter, r *http.Request) {

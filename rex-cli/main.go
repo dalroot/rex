@@ -215,7 +215,10 @@ func runExec(args []string) {
 	}
 
 	if len(posArgs) < 2 {
-		fmt.Fprintln(os.Stderr, "Error: Usage: rex exec <host:port> [flags] \"<command>\"")
+		fmt.Fprintln(os.Stderr, "❌ Error: Missing server address or command")
+		fmt.Fprintln(os.Stderr, "💡 REX Agent Quickstart:")
+		fmt.Fprintln(os.Stderr, "   • Execute command: rex exec <IP>:7444 -t <TOKEN> \"<command>\"")
+		fmt.Fprintln(os.Stderr, "   • Full terminal:   rex connect <IP>:7444 -t <TOKEN>")
 		os.Exit(1)
 	}
 
@@ -231,7 +234,9 @@ func runExec(args []string) {
 	if *token == "" {
 		enteredToken, err := ReadPassword(fmt.Sprintf("🔑 Enter REX Token for %s: ", addr))
 		if err != nil || strings.TrimSpace(enteredToken) == "" {
-			fmt.Fprintln(os.Stderr, "\nError: Authentication token required.")
+			fmt.Fprintln(os.Stderr, "\n❌ Error: Authentication token required.")
+			fmt.Fprintln(os.Stderr, "💡 Pass token via flag: rex exec <IP>:7444 -t <TOKEN> \"<command>\"")
+			fmt.Fprintln(os.Stderr, "   Or set environment variable: export REX_TOKEN=<TOKEN>")
 			os.Exit(1)
 		}
 		*token = strings.TrimSpace(enteredToken)
@@ -240,7 +245,11 @@ func runExec(args []string) {
 
 	client, err := Dial(addr, *token, *useTLS, *insecure)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "❌ Connection failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "❌ Connection failed to %s: %v\n", addr, err)
+		fmt.Fprintln(os.Stderr, "💡 REX Agent Troubleshooting Guide:")
+		fmt.Fprintln(os.Stderr, "   1. Target Port: Connect to TCP Port 7444 (e.g. 5.202.5.134:7444)")
+		fmt.Fprintln(os.Stderr, "   2. TLS 1.3: Enabled by default. If remote daemon runs plaintext, pass --tls=false")
+		fmt.Fprintln(os.Stderr, "   3. Token: Verify token via -t <TOKEN> or export REX_TOKEN=<TOKEN>")
 		os.Exit(1)
 	}
 	defer client.Close()
