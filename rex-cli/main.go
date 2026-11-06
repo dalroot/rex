@@ -47,8 +47,8 @@ func printUsage() {
 	fmt.Println("  --raw, -r       Output raw payload without terminal framing")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  rex connect 5.202.5.134:7444 --token mysecrettoken")
-	fmt.Println("  rex exec 5.202.5.134:7444 -t mytoken \"uptime\"")
+	fmt.Println("  rex connect <SERVER_IP>:7444 --token mysecrettoken")
+	fmt.Println("  rex exec <SERVER_IP>:7444 -t mytoken \"uptime\"")
 }
 
 func main() {
@@ -116,7 +116,7 @@ func main() {
 func parseTargetAddress(input string) string {
 	target := strings.TrimSpace(input)
 
-	// Format 1: @root 5.202.5.134 -> handled by checking caller args, but if target has @prefix:
+	// Format 1: @root <SERVER_IP> -> handled by checking caller args, but if target has @prefix:
 	if strings.HasPrefix(target, "@") {
 		// e.g. @root: stripped
 		target = strings.TrimPrefix(target, "@")
@@ -125,7 +125,7 @@ func parseTargetAddress(input string) string {
 		}
 	}
 
-	// Format 2: root@5.202.5.134 or @5.202.5.134
+	// Format 2: root@<SERVER_IP> or @<SERVER_IP>
 	if strings.Contains(target, "@") {
 		parts := strings.SplitN(target, "@", 2)
 		target = parts[1]
@@ -175,14 +175,14 @@ func runConnect(args []string) {
 	if len(posArgs) < 1 {
 		fmt.Fprintln(os.Stderr, "Error: Missing <host:port> address")
 		fmt.Fprintln(os.Stderr, "Examples:")
-		fmt.Fprintln(os.Stderr, "  rex @root 5.202.5.134")
-		fmt.Fprintln(os.Stderr, "  rex root@5.202.5.134")
-		fmt.Fprintln(os.Stderr, "  rex connect 5.202.5.134:7444")
+		fmt.Fprintln(os.Stderr, "  rex @root <SERVER_IP>")
+		fmt.Fprintln(os.Stderr, "  rex root@<SERVER_IP>")
+		fmt.Fprintln(os.Stderr, "  rex connect <SERVER_IP>:7444")
 		os.Exit(1)
 	}
 
 	var rawAddr string
-	// Check if user passed: rex @root 5.202.5.134 (two positional arguments)
+	// Check if user passed: rex @root <SERVER_IP> (two positional arguments)
 	if len(posArgs) >= 2 && (strings.HasPrefix(posArgs[0], "@") || posArgs[0] == "root") {
 		rawAddr = posArgs[1]
 	} else {
@@ -286,7 +286,7 @@ func runExec(args []string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "❌ Connection failed to %s: %v\n", addr, err)
 		fmt.Fprintln(os.Stderr, "💡 REX Agent Troubleshooting Guide:")
-		fmt.Fprintln(os.Stderr, "   1. Target Port: Connect to TCP Port 7444 (e.g. 5.202.5.134:7444)")
+		fmt.Fprintln(os.Stderr, "   1. Target Port: Connect to TCP Port 7444 (e.g. <SERVER_IP>:7444)")
 		fmt.Fprintln(os.Stderr, "   2. TLS 1.3: Enabled by default. If remote daemon runs plaintext, pass --tls=false")
 		fmt.Fprintln(os.Stderr, "   3. Token: Verify token via -t <TOKEN> or export REX_TOKEN=<TOKEN>")
 		os.Exit(1)

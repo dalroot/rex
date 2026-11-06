@@ -1,224 +1,190 @@
-# ⚡ REX — Remote EXecution Protocol (RXP/2.5 WarpGate)
+# REX — Remote EXecution Protocol (RXP/2.5)
 
-<p align="center">
-  <img src="https://img.shields.io/github/v/release/dalroot/rex?style=for-the-badge&color=7289da&label=RXP%2F2.5" alt="Release">
-  <img src="https://img.shields.io/badge/Latency-Sub--1ms-brightgreen?style=for-the-badge&logo=speedtest" alt="Latency">
-  <img src="https://img.shields.io/badge/Transport-Enforced%20TLS1.3-blue?style=for-the-badge&logo=linux" alt="Transport">
-  <img src="https://img.shields.io/badge/CLI-100%25%20Native%20Go-cyan?style=for-the-badge&logo=go" alt="Native Go CLI">
-  <img src="https://img.shields.io/badge/Local%20Footprint-Zero-orange?style=for-the-badge" alt="Zero Local Footprint">
-  <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License">
-</p>
+[![Release](https://img.shields.io/github/v/release/dalroot/rex?style=flat-square&color=2563eb&label=Release)](https://github.com/dalroot/rex/releases)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Go Report](https://img.shields.io/badge/Language-Go%20%7C%20Python-00add8?style=flat-square)](https://golang.org)
+[![Transport](https://img.shields.io/badge/Transport-TLS%201.3-success?style=flat-square)](https://en.wikipedia.org/wiki/Transport_Layer_Security)
 
-<p align="center">
-  <b>The Agent-Native Infrastructure Control Protocol & Direct Server Runtime for Autonomous AI Agents.</b><br>
-  <i>Sub-millisecond execution start, 100% Native Go CLI, Interactive SSH-like Terminal, Persistent Server PTY Sessions, and Enforced TLS 1.3 Transport.</i>
-</p>
+An open-source, lightweight communication layer designed for autonomous AI agents and automated workflows to interact with remote Linux servers, execute commands, stream live terminal sessions, and transfer data without relying on OpenSSH handshakes or heavy shell wrappers.
 
 ---
 
-> 🇮🇷 **راهنمای کامل به زبان فارسی:** برای مطالعه کامل مستندات به زبان فارسی، به برگه [README_FA.md](README_FA.md) مراجعه کنید.
+> 🇮🇷 **راهنمای فارسی:** مستندات کامل به زبان فارسی در فایل [README_FA.md](README_FA.md) در دسترس است.
 
 ---
 
-## ⚡ What's New in v2.5.0 (Sub-Release: REX Connect / WarpGate)
+## Overview
 
-- **100% Native Go Client (`rex-cli`)**: Zero Python or runtime dependencies. A single standalone statically-linked binary (`rex`) with instant sub-millisecond execution.
-- **Human Interactive Terminal (SSH-Alternative)**: Run `rex @root <IP>` or `rex connect <IP>` to drop directly into a live, full-screen remote Linux shell with Tab-completion, arrow keys, and interactive tools (`nano`, `vim`, `htop`).
-- **Secure SSH-like Token Prompt**: No need to put secret tokens in your shell history; `rex` prompts securely without echoing characters.
-- **Enforced TLS 1.3 Transport**: Binary frames stream over encrypted TLS 1.3 sockets on port `7444`.
-- **Native File Transfer Engine**: Upload and download files directly without base64 bash echo hacks.
+Traditional remote execution approaches present clear trade-offs when automated by AI agents or programmatic pipelines:
+- **OpenSSH / SSHPass**: Designed for human interaction; requires repeated cryptographic handshakes, PTY allocations on the client, shell environment re-initialization, and string escaping across nested commands.
+- **HTTP / REST Endpoints**: Stateless; lacks persistent working directory state (`cd`, `export`), streaming stderr/stdout in real-time, or native PTY control for interactive tools.
 
----
-
-## 💻 Human Terminal Experience (`rex connect`)
-
-Connect to any REX server with standard SSH-like ergonomics without needing an exposed OpenSSH Port 22:
-
-```bash
-# SSH-like human syntax (securely prompts for token)
-rex @root 5.202.5.134
-rex root@5.202.5.134:7444
-
-# Or pass token directly or via REX_TOKEN environment variable
-rex connect 5.202.5.134:7444 --token <YOUR_TOKEN>
-
-# Fast live command execution for agent scripts
-rex exec 5.202.5.134:7444 -t <YOUR_TOKEN> "systemctl status x-ui"
-```
+**REX** bridges this gap by providing:
+1. **Binary Framing (RXP/2.5)**: Low-overhead 8-byte frame header over encrypted TLS 1.3 TCP sockets.
+2. **Fast Execution (`rex exec`)**: Direct command execution in isolated processes with immediate return of exit codes, stdout, and stderr.
+3. **Interactive & Stateful Terminal (`rex connect`)**: Persistent remote pseudo-terminal (PTY) supporting ANSI escapes, dynamic window resize, and interactive tools (`vim`, `htop`, `nano`).
+4. **Daemon Lifecycle Management**: In-place updates, systemd service control, and access policy management directly via the unified CLI.
 
 ---
 
-## 💡 What is REX?
+## Comparison: REX vs. OpenSSH vs. HTTP/REST
 
-**REX** (Remote EXecution Protocol) is an open-source, agent-native infrastructure control protocol designed specifically for **AI Agents** (such as Hermes, Antigravity, AutoGPT, and autonomous LLM agents) to observe, manage, and execute actions directly on remote Linux servers **with zero local process footprint.**
-
-Unlike legacy protocols designed for human terminal operators (SSH, Telnet) or generic web APIs (HTTP REST, gRPC), REX 2.0 provides an **in-memory direct server runtime** with stateful PTY session persistence, native file syscall RPCs, and built-in protocol self-instruction for LLMs.
-
-```mermaid
-graph TD
-    Agent["AI Agent / LLM Client Host"] <==> |"RXP/2.0 Raw TCP Socket (:7444)\n8-Byte Binary Packet Header"| ServerDaemon["REX Server Daemon (rex-node)"]
-
-    subgraph Direct Remote Server Runtime
-        WireDecoder["RXP Binary Decoder / Router"]
-        PTYEngine["Persistent Server PTY Shell Engine (/bin/bash)"]
-        SyscallEngine["Native OS Syscall Engine (Files / Proc)"]
-        AgentDirective["Agent Self-Discovery Engine (0x0A)"]
-    end
-
-    ServerDaemon --> WireDecoder
-    WireDecoder --> PTYEngine
-    WireDecoder --> SyscallEngine
-    WireDecoder --> AgentDirective
-```
-
----
-
-## ⚔️ Architectural Comparison
-
-| Metric / Feature | SSH / TTY | WebSockets / REST | **REX 2.0 (RXP/2.0 Raw TCP)** |
+| Capability | OpenSSH (`ssh` / `sshpass`) | HTTP REST APIs | REX Protocol (`rex`) |
 | :--- | :--- | :--- | :--- |
-| **Local Host Footprint** | Requires TTY Allocation / Local Shell | Spawns Subprocess per Call | **Zero (Pure Network Socket)** |
-| **Transport Header Overhead** | High (SSH Handshake, Key Exch) | Heavy (HTTP Headers & Frame Padding) | **Minimal (8-Byte Binary Header)** |
-| **State Continuity (`cd`, `export`)** | Lost on Session Disconnect | Stateless (Lost after each call) | **100% Preserved (Server PTY Session)** |
-| **File / Metric IO** | Requires `cat`, `ls`, `df` Subshells | String Escaping / Base64 Wrapping | **Native Direct OS Syscalls (<1ms)** |
-| **AI Agent Self-Instruction** | None (Expects Human Operator) | None | **Built-in Opcode Directive (`0x0A`)** |
-| **Start Latency** | 50ms – 250ms | 10ms – 40ms | **< 1.8ms (Sub-2ms)** |
+| **Primary Target** | Human terminal operators & interactive sessions | Web services & microservices | Autonomous AI agents & automated pipelines |
+| **Transport Overhead** | Full SSH negotiation & key exchange per session | HTTP headers, TLS handshakes, JSON serialization | 8-byte binary framing over persistent TLS 1.3 socket |
+| **Command Execution Latency** | ~50ms – 250ms (session setup dependent) | ~15ms – 60ms (stateless request) | ~1.5ms – 5ms (FastExec direct dispatch) |
+| **Local Client Footprint** | Spawns local bash + sshpass processes & local PTY | HTTP client runtime & dependencies | Statically-linked Go binary (`<15MB`), zero dependencies |
+| **Stateful Working Directory** | Lost between separate non-interactive calls | Requires server-side session store & token tracking | Native PTY session maintains state across consecutive calls |
+| **Agent Self-Discovery** | None (agent must guess OS & tools) | OpenAPI / Swagger schema (if enabled) | Structured JSON guide on port 7443 & built-in help |
+| **Security Policy Modes** | User/Group UNIX permissions | API tokens & RBAC | 3 Node modes: `autonomous`, `review`, and `allowlist` |
 
 ---
 
-## 🎯 Core Pillars of REX 2.0
+## Architecture
 
-### 1. Zero-Local Footprint Execution
-The client machine running the AI Agent **spawns zero local bash/terminal subprocesses**, **allocates zero local TTY emulators**, and **creates zero temporary script files** on local disk. Communication takes place purely over a lightweight `asyncio` TCP socket stream.
+REX consists of two core components:
 
-### 2. Persistent Server PTY Session Engine
-`rex-node` allocates a long-lived pseudo-terminal (`/bin/bash`) directly on the Linux server host. Working directory changes (`cd /var/www`), environment variables (`export DB_HOST=localhost`), and background processes remain active continuously across sequential agent calls.
-
-### 3. Native OS Syscall RPC Engine
-For common filesystem and diagnostic tasks, REX bypasses shell invocation completely. Reading files, listing directories, checking disk stats, or querying RAM execute via direct in-memory Go system calls with sub-millisecond efficiency.
-
-### 4. Agent Self-Discovery Opcode (`0x0A` - `OpAgentGuide`)
-REX 2.0 includes a dedicated protocol opcode that returns an authoritative protocol directive to connecting LLM agents:
-```text
-[REX PROTOCOL RULE]
-You are connected to the REX Direct Server Runtime via RXP/2.0.
-CRITICAL DIRECTIVE:
-1. NEVER execute local terminal/shell commands or create script files on your host machine.
-2. ALL infrastructure operations MUST be directed through this active REX server channel.
+```
+┌──────────────────────────────────────┐             TLS 1.3 Socket (:7444)            ┌──────────────────────────────────────────────┐
+│           REX Client (rex)           │ ═════════════════════════════════════════════ │           REX Daemon (rex-node)              │
+│                                      │          8-Byte RXP Binary Framing            │                                              │
+│  • rex exec    (Fast Command Exec)   │                                               │  • RXP Protocol Demux                        │
+│  • rex connect (Interactive PTY)     │                                               │  • Subprocess Execution Engine               │
+│  • rex info    (System Metrics)      │                                               │  • Stateful PTY Terminal Runtime             │
+│  • rex update  (Daemon Lifecycle)    │                                               │  • Policy Filter (Autonomous/Review/Allow)   │
+└──────────────────────────────────────┘                                               └──────────────────────────────────────────────┘
 ```
 
----
+1. **`rex-node` (Server Daemon)**:
+   - Written in Go. Runs as a systemd service on remote Linux hosts.
+   - Listens on TCP port `7444` (encrypted with auto-generated TLS 1.3 certificates).
+   - Manages subprocess execution, persistent PTY allocation via Linux pseudo-terminals, and policy-based command filtering.
+   - Provides a discovery endpoint on port `7443` for agent self-configuration.
 
-## 📐 RXP/2.0 Binary Wire Framing Specification
+2. **`rex-cli` (Client Tool)**:
+   - Statically compiled single binary (`rex`) with zero external dependencies.
+   - Formats execution output with clean, readable terminal framing by default, with `-r` / `--raw` support for scripts and pipelines.
 
-All communications over TCP Port `7444` use the **RXP/2.0 Packed Binary Structure** (8-byte header):
-
-```text
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|       Magic Bytes ('R' 'X')   |  Version(0x02)|  Opcode (1B)  |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          Stream ID (2B)       |      Payload Length (2B)      |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-|                       Payload (Raw Bytes)                     |
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-```
-
-### Opcode Registry Table
-
-| Opcode | Constant | Direction | Function & Description |
-| :---: | :--- | :---: | :--- |
-| `0x01` | `OP_AUTH_HANDSHAKE` | C ↔ S | Authenticates token; returns status string (`RXP/2.0 OK`). |
-| `0x02` | `OP_PTY_SPAWN` | C → S | Spawns a persistent `/bin/bash` PTY session on server. |
-| `0x03` | `OP_PTY_DATA` | C ↔ S | Streams STDIN data to server PTY / STDOUT data back to agent. |
-| `0x04` | `OP_PTY_RESIZE` | C → S | Dynamically resizes server terminal window (`Cols` / `Rows`). |
-| `0x05` | `OP_PTY_CLOSE` | C ↔ S | Terminates active server PTY session cleanly. |
-| `0x06` | `OP_NATIVE_FILE_OP` | C ↔ S | Performs direct OS file syscalls (`read`, `write`, `stat`, `list`). |
-| `0x07` | `OP_NATIVE_SYSINFO` | C ↔ S | Fetches memory, CPU, load average, and uptime from kernel. |
-| `0x08` | `OP_PING` | C → S | Sent by agent to maintain channel keep-alive ping. |
-| `0x09` | `OP_PONG` | S → C | Sent by server in response to keep-alive ping. |
-| `0x0A` | `OP_AGENT_GUIDE` | C ↔ S | Returns the fundamental REX protocol rule directive. |
-| `0x0B` | `OP_FAST_EXEC` | C ↔ S | Direct sub-millisecond command execution bypassing PTY overhead. |
-| `0xFF` | `OP_ERROR` | S → C | Returns structured error payload frame. |
+3. **`rex-client` (Python SDK)**:
+   - Async Python client (`asyncio`) for direct programmatic agent integration.
 
 ---
 
-## ⚡ Server Installation & Management (`rex-node`)
+## Quick Start
 
-### 1. Zero-Config One-Line Installer
+### 1. Server Installation (`rex-node`)
 
-Run this command on any Linux server (Ubuntu, Debian, RHEL, CentOS):
+Run the automated installer on the remote Linux host (Ubuntu, Debian, CentOS, RHEL):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dalroot/rex/master/rex-node/install.sh | bash
 ```
 
-*Daemon listens on **TCP Port `7444`** (RXP/2.0 Binary Protocol) & **Port `7443`** (WebSocket).*
+*The installer generates a secure token and TLS 1.3 certificate, configures systemd, and starts the service.*
 
-### 2. Server Security Modes (`rex mode`)
+To specify a custom token during setup:
+```bash
+curl -fsSL https://raw.githubusercontent.com/dalroot/rex/master/rex-node/install.sh | bash -s -- --token YOUR_TOKEN
+```
 
-Manage security policy levels dynamically via CLI on the server:
+### 2. Client Installation (`rex-cli`)
+
+Install the standalone `rex` binary onto the client machine or agent runtime (Linux x86_64, ARM64):
 
 ```bash
-# Check current active security mode
-rex mode
-
-# Switch to Autonomous Mode (Full Agent Freedom with Destructive Command Filters)
-rex mode autonomous
-
-# Switch to Review Mode (Read-only Auto, Dangerous Mutations Flagged)
-rex mode review
-
-# Switch to Strict Allowlist Mode (Only Whitelisted Commands Permitted)
-rex mode allowlist
+curl -fsSL https://raw.githubusercontent.com/dalroot/rex/master/install-cli.sh | bash
 ```
 
 ---
 
-## 🚀 Agent SDK Guide (`rex-client`)
+## CLI Usage
 
-### Installation
+### Fast Command Execution (`rex exec`)
+
+Execute a remote command and stream output back:
+
+```bash
+rex exec <SERVER_IP>:7444 -t <TOKEN> "uptime"
+```
+
+Formatted output:
+```text
+┌── ⚡ REX [<SERVER_IP>:7444]
+│ ❯ uptime
+├── OUTPUT ──────────────────────────────────────────────────────────
+ 15:30:12 up 14 days,  3:18,  1 user,  load average: 0.08, 0.05, 0.01
+└── [Elapsed: 12ms | Status: OK] ─────────────────────────────────────
+```
+
+For raw output suitable for shell scripts, pipelines, or `jq`:
+```bash
+rex exec <SERVER_IP>:7444 -t <TOKEN> -r "hostname"
+```
+
+> **Compound commands & pipes:** Wrap commands containing pipes (`|`), redirects (`>`), or chaining (`&&`) in quotes:
+> ```bash
+> rex exec <SERVER_IP>:7444 -t <TOKEN> "systemctl status nginx | head -n 15"
+> ```
+
+### Interactive Terminal Session (`rex connect`)
+
+Attach an interactive shell session (supports Tab-completion, arrow keys, and full-screen editors):
+
+```bash
+rex connect <SERVER_IP>:7444 -t <TOKEN>
+```
+
+Alternatively, you can pass the address without explicit subcommands:
+```bash
+rex <SERVER_IP>:7444
+```
+
+### Remote System Telemetry (`rex info`)
+
+Fetch hardware metrics (CPU cores, load average, available RAM, uptime) directly without spawning a shell:
+
+```bash
+rex info <SERVER_IP>:7444 -t <TOKEN>
+```
+
+### Local Node Management
+
+When running on the server hosting `rex-node`:
+
+```bash
+rex status              # Check daemon service status
+rex restart             # Restart the background daemon
+rex logs                # Stream live journalctl service logs
+rex update              # In-place update to the latest release
+rex mode autonomous     # Switch security policy: autonomous | review | allowlist
+```
+
+---
+
+## Python SDK Integration
+
+Install the client package:
 
 ```bash
 pip install git+https://github.com/dalroot/rex.git#subdirectory=rex-client
 ```
 
-### Complete Python Example (`RXPDirectClient`)
+Usage example:
 
 ```python
 import asyncio
 from rex_client import RXPDirectClient
 
 async def main():
-    # Establish direct TCP socket connection to REX server (Port 7444)
-    async with RXPDirectClient(host="80.253.254.207", token="YOUR_TOKEN", port=7444) as client:
-        
-        # 1. Retrieve REX Protocol Agent Directive
-        directive = await client.get_agent_guide()
-        print(f"=== Protocol Directive ===\n{directive}\n")
+    async with RXPDirectClient(host="<SERVER_IP>", token="YOUR_TOKEN", port=7444) as client:
+        # Fast command execution
+        result = await client.fast_exec("uname -a")
+        print(f"Kernel: {result}")
 
-        # 2. Spawn Persistent Server PTY Shell Session
-        session = await client.spawn_pty(cols=80, rows=24)
-        
-        # Working directory & environment persist continuously across commands
-        await session.send("cd /var/www/html\n")
-        await session.send("export DEPLOY_ENV=production\n")
-        await session.send("pwd && echo $DEPLOY_ENV\n")
-        
-        stdout = await session.read_output(timeout=0.5)
-        print(f"=== Stateful PTY Output ===\n{stdout}")
-        await session.close()
-
-        # 3. Direct Native Syscall for File Info (No Shell Invocations)
-        file_stat = await client.native_file_op("stat", "/etc/passwd")
-        print(f"File Stat: {file_stat['stat']}")
-
-        # 4. Fetch Kernel Hardware & Memory Metrics
+        # Kernel hardware metrics
         info = await client.sysinfo()
-        print(f"RAM Available: {info['mem_available_kb']} KB | CPUs: {info['cpus']} | Load: {info['load_1m']}")
+        print(f"Memory available: {info['mem_available_kb']} KB")
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -226,25 +192,47 @@ if __name__ == "__main__":
 
 ---
 
-## ⚡ Benchmarks
+## Security Model
 
-| Metric | SSH (OpenSSH) | WebSocket JSON | **REX 2.0 (RXP Binary TCP)** |
-| :--- | :--- | :--- | :--- |
-| **Execution Start Latency** | 120ms – 350ms | 8ms – 25ms | **1.6ms – 2.1ms** |
-| **Payload Size (Small Cmd)** | 1,420 bytes | 380 bytes | **42 bytes (Header + Payload)** |
-| **CPU Usage on Server** | ~4.5% per session | ~1.2% per session | **< 0.1% per session** |
-| **Local Memory Footprint** | ~18 MB (OpenSSH TTY) | ~12 MB (WS client) | **< 1.2 MB (Async Socket)** |
-
----
-
-## 🤝 Contributing & Community
-
-We welcome contributions, feature proposals, and community SDK implementations (Node.js, Rust, Go)!
-
-- **Report Bugs & Ideas:** Open an issue in [GitHub Issues](https://github.com/dalroot/rex/issues).
-- **Changelog:** Review release history in [CHANGELOG.md](CHANGELOG.md).
+1. **Transport Encryption**: All socket communication enforces TLS 1.3. Plaintext connections are rejected by default.
+2. **Bearer Token Authentication**: Each node requires an authentication token. Tokens can be provided via flag (`-t`), environment variable (`REX_TOKEN`), or prompted interactively without shell history echoing.
+3. **Execution Policy Modes (`/etc/rex/allowlist.yaml`)**:
+   - `autonomous`: Full execution freedom with safety filters against catastrophic system commands (e.g., `rm -rf /`, `mkfs`).
+   - `review`: Mutating commands require explicit confirmation.
+   - `allowlist`: Only explicitly listed commands are permitted.
 
 ---
 
-## 📄 License
-Released under the [MIT License](LICENSE) © 2026 dalroot & REX Protocol Contributors.
+## Repository Structure
+
+```
+├── rex-cli/              # Native Go client CLI (rex)
+│   ├── main.go           # CLI entrypoint, argument parsing, output framing
+│   ├── client.go         # TLS 1.3 socket transport & RXP binary framer
+│   └── terminal.go       # PTY terminal emulator & raw mode handling
+├── rex-node/             # Go daemon service (rex-node)
+│   ├── server.go         # TLS TCP listener & HTTP probe server
+│   ├── executor.go       # FastExec command runner & compound pipeline handler
+│   ├── pty_runtime.go    # Linux PTY allocator & session manager
+│   ├── allowlist.go      # Security mode policy enforcement
+│   └── install.sh        # Server installer & systemd service setup
+├── rex-client/           # Python SDK (rex_client)
+├── install-cli.sh        # Client one-line installer for Linux/macOS
+├── AGENT_GUIDE.md        # Reference manual for autonomous LLM agents
+├── CHANGELOG.md          # Version history
+└── LICENSE               # MIT License
+```
+
+---
+
+## Contributing
+
+Contributions, bug reports, and suggestions are welcome:
+- Issues: [GitHub Issues](https://github.com/dalroot/rex/issues)
+- Pull Requests: Feel free to submit PRs following standard Go and Python formatting standards.
+
+---
+
+## License
+
+This project is open-source and licensed under the [MIT License](LICENSE).
